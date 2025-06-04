@@ -60,6 +60,7 @@ export const getSysInfo = async (
   }
 };
 
+// Get environment variables
 export const getEnvVar = async (
   req: Request,
   res: Response,
@@ -76,19 +77,13 @@ export const getEnvVar = async (
     }
     envVar += "</table>";
 
-    res.send(
-      htmlBoilerPlate.replace(
-        "{0}",
-        `
-            <h1>Environment Variables</h1>
-            ${envVar}`,
-      ),
-    );
+    res.send(htmlBoilerPlate.replace("{0}", envVar));
   } catch (error) {
     next(error);
   }
 };
 
+// Redirects to another host and path
 export const redirect = async (
   req: Request,
   res: Response,
