@@ -66,8 +66,8 @@ export const getEnvVar = async (req: Request, res: Response) => {
   res.send(htmlBoilerPlate.replace("{0}", envVar));
 };
 
-// Redirects to another host and path
-export const redirect = async (
+// Perform a proxy request to another host and path
+export const proxy_request = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -92,19 +92,15 @@ export const redirect = async (
 // Fibonacci sequence
 export const fibonacci = async (req: Request, res: Response) => {
   const n = parseInt(req.query.n as string) || 1;
-  if (isNaN(n)) {
-    res.status(400).send("Invalid number");
-  } else {
-    const start = Date.now();
-    const fib_result = await fib(n);
-    const end = Date.now();
-    const result = {
-      architecture: process.arch,
-      fibonacci: { n: n, result: fib_result },
-      timeTaken: end - start + " ms",
-    };
-    res.status(200).send(result);
-  }
+  const start = Date.now();
+  const fib_result = await fib(n);
+  const end = Date.now();
+  const result = {
+    architecture: process.arch,
+    fibonacci: { n: n, result: fib_result },
+    timeTaken: end - start + " ms",
+  };
+  res.status(200).send(result);
 };
 
 const fib = async (n: number): Promise<number> => {
