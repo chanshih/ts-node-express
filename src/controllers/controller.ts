@@ -67,7 +67,7 @@ export const getEnvVar = async (req: Request, res: Response) => {
 };
 
 // Perform a proxy request to another host and path
-export const proxy_request = async (
+export const proxyRequest = async (
   req: Request,
   res: Response,
   next: NextFunction,
