@@ -4,7 +4,7 @@ FROM node:24
 # ENV LD_PRELOAD="/opt/dynatrace/oneagent/agent/lib/liboneagentproc.so"
 # ARG DT_API_URL="https://<environment-id>.live.dynatrace.com/api"
 # ARG DT_API_TOKEN=""
-ARG ARCH="arm"
+# ARG ARCH="arm"
 ARG DT_ONEAGENT_OPTIONS="flavor=default&include=nodejs"
 ENV DT_HOME="/opt/dynatrace/oneagent"
 RUN mkdir -p "$DT_HOME"
