@@ -1,12 +1,14 @@
-FROM node:24
+FROM node:22
 
+# Dynatrace OneAgent
 # COPY --from=<environment-id>.live.dynatrace.com/linux/oneagent-codemodules:nodejs / /
-# ENV LD_PRELOAD="/opt/dynatrace/oneagent/agent/lib/liboneagentproc.so"
+# ENV LD_PRELOAD="/opt/dynatrace/oneagent/agent/lib64/liboneagentproc.so"
 ARG DT_API_URL="https://<environment-id>.live.dynatrace.com/api"
-ARG DT_API_TOKEN=""
+ARG DT_API_TOKEN="<api-token>"
 ARG ARCH="arm"
 ARG DT_ONEAGENT_OPTIONS="flavor=default&include=nodejs"
 ENV DT_HOME="/opt/dynatrace/oneagent"
+ENV DT_LOGLEVELCON="info"
 RUN mkdir -p "$DT_HOME"
 RUN wget -O "$DT_HOME/oneagent.zip" "$DT_API_URL/v1/deployment/installer/agent/unix/paas/latest?arch=$ARCH&Api-Token=$DT_API_TOKEN&$DT_ONEAGENT_OPTIONS"
 RUN unzip -d "$DT_HOME" "$DT_HOME/oneagent.zip"
@@ -30,7 +32,10 @@ RUN npm run build
 # Expose the port
 EXPOSE 8000
 
+# Starting Dynatrace OneAgent
 ENTRYPOINT [ "/opt/dynatrace/oneagent/dynatrace-agent64.sh" ]
+
+USER node
 
 # Start the application.
 CMD ["npm", "start"]
