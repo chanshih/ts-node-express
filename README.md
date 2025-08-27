@@ -104,3 +104,40 @@ Run comprehensive service tests:
 2. Test: `./test-services.sh`
 3. Stop: `lsof -ti:3001,3002,3003,3004,3005 | xargs kill -9`
 
+## EKS Testing
+
+### Deploy to EKS
+
+```bash
+# Deploy all microservices
+kubectl apply -f ecommerce-microservices.yaml
+
+# Check deployment status
+kubectl get pods -n ecommerce
+kubectl get ingress -n ecommerce
+```
+
+### Test EKS Deployment
+
+```bash
+# Test all services via ALB
+./test-eks.sh
+
+# Manual testing
+ALB_URL=$(kubectl get ingress ecommerce-ingress -n ecommerce -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+curl http://$ALB_URL/api/users
+```
+
+### Debug EKS Issues
+
+```bash
+# Check pod logs
+kubectl logs -f deployment/user-service -n ecommerce
+
+# Check service connectivity
+kubectl exec -it deployment/order-service -n ecommerce -- curl http://product-service:3002/api/products
+
+# Port forward for direct testing
+kubectl port-forward service/user-service 3001:3001 -n ecommerce
+```
+

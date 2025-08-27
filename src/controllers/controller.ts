@@ -107,3 +107,32 @@ const fib = async (n: number): Promise<number> => {
   if (n <= 1) return n;
   return (await fib(n - 1)) + (await fib(n - 2));
 };
+
+// Microservice-specific endpoints
+export const getServiceData = async (req: Request, res: Response) => {
+  const serviceName = process.env.SERVICE_NAME || 'unknown';
+  const port = process.env.PORT || '3000';
+  
+  const mockData: Record<string, any[]> = {
+    'user-service': [{ id: 1, name: 'John Doe', email: 'john@example.com' }],
+    'product-service': [{ id: 1, name: 'Laptop', price: 999.99 }],
+    'order-service': [{ id: 1, userId: 1, productId: 1, status: 'pending' }],
+    'payment-service': [{ id: 1, orderId: 1, amount: 999.99, status: 'completed' }],
+    'notification-service': [{ id: 1, message: 'Order confirmed', sent: true }]
+  };
+
+  res.json({
+    service: serviceName,
+    port: port,
+    data: mockData[serviceName] || [],
+    timestamp: new Date().toISOString()
+  });
+};
+
+export const healthCheck = async (req: Request, res: Response) => {
+  res.json({ 
+    status: 'healthy', 
+    service: process.env.SERVICE_NAME || 'unknown',
+    timestamp: new Date().toISOString() 
+  });
+};
