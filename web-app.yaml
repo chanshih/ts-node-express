@@ -1,0 +1,353 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ecommerce
+---
+# ConfigMap for service URLs
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-config
+  namespace: ecommerce
+data:
+  USER_SERVICE_URL: "http://user-service:3001"
+  PRODUCT_SERVICE_URL: "http://product-service:3002"
+  ORDER_SERVICE_URL: "http://order-service:3003"
+  PAYMENT_SERVICE_URL: "http://payment-service:3004"
+  NOTIFICATION_SERVICE_URL: "http://notification-service:3005"
+---
+# User Service
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: user-service
+  namespace: ecommerce
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ecommerce
+  name: user-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      serviceAccountName: user-service
+      containers:
+        - name: user-service
+          image: your-registry/user-service:latest
+          ports:
+            - containerPort: 3001
+          env:
+            - name: PORT
+              value: "3001"
+            - name: SERVICE_NAME
+              value: "user-service"
+          envFrom:
+            - configMapRef:
+                name: service-config
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ecommerce
+  name: user-service
+spec:
+  selector:
+    app: user-service
+  ports:
+    - port: 3001
+      targetPort: 3001
+  type: ClusterIP
+---
+# Product Service
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: product-service
+  namespace: ecommerce
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ecommerce
+  name: product-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+    spec:
+      serviceAccountName: product-service
+      containers:
+        - name: product-service
+          image: your-registry/product-service:latest
+          ports:
+            - containerPort: 3002
+          env:
+            - name: PORT
+              value: "3002"
+            - name: SERVICE_NAME
+              value: "product-service"
+          envFrom:
+            - configMapRef:
+                name: service-config
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ecommerce
+  name: product-service
+spec:
+  selector:
+    app: product-service
+  ports:
+    - port: 3002
+      targetPort: 3002
+  type: ClusterIP
+---
+# Order Service (calls Product Service synchronously)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: order-service
+  namespace: ecommerce
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ecommerce
+  name: order-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      serviceAccountName: order-service
+      containers:
+        - name: order-service
+          image: your-registry/order-service:latest
+          ports:
+            - containerPort: 3003
+          env:
+            - name: PORT
+              value: "3003"
+            - name: SERVICE_NAME
+              value: "order-service"
+          envFrom:
+            - configMapRef:
+                name: service-config
+          resources:
+            requests:
+              cpu: "300m"
+              memory: "512Mi"
+            limits:
+              cpu: "700m"
+              memory: "1Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ecommerce
+  name: order-service
+spec:
+  selector:
+    app: order-service
+  ports:
+    - port: 3003
+      targetPort: 3003
+  type: ClusterIP
+---
+# Payment Service
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: payment-service
+  namespace: ecommerce
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ecommerce
+  name: payment-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      serviceAccountName: payment-service
+      containers:
+        - name: payment-service
+          image: your-registry/payment-service:latest
+          ports:
+            - containerPort: 3004
+          env:
+            - name: PORT
+              value: "3004"
+            - name: SERVICE_NAME
+              value: "payment-service"
+          envFrom:
+            - configMapRef:
+                name: service-config
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ecommerce
+  name: payment-service
+spec:
+  selector:
+    app: payment-service
+  ports:
+    - port: 3004
+      targetPort: 3004
+  type: ClusterIP
+---
+# Notification Service
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: notification-service
+  namespace: ecommerce
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ecommerce
+  name: notification-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      serviceAccountName: notification-service
+      containers:
+        - name: notification-service
+          image: your-registry/notification-service:latest
+          ports:
+            - containerPort: 3005
+          env:
+            - name: PORT
+              value: "3005"
+            - name: SERVICE_NAME
+              value: "notification-service"
+          envFrom:
+            - configMapRef:
+                name: service-config
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ecommerce
+  name: notification-service
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - port: 3005
+      targetPort: 3005
+  type: ClusterIP
+---
+# API Gateway (Load Balancer)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: ecommerce
+  name: ecommerce-ingress
+  annotations:
+    alb.ingress.kubernetes.io/load-balancer-name: ecommerce-alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /api/users
+            pathType: Prefix
+            backend:
+              service:
+                name: user-service
+                port:
+                  number: 3001
+          - path: /api/products
+            pathType: Prefix
+            backend:
+              service:
+                name: product-service
+                port:
+                  number: 3002
+          - path: /api/orders
+            pathType: Prefix
+            backend:
+              service:
+                name: order-service
+                port:
+                  number: 3003
+          - path: /api/payments
+            pathType: Prefix
+            backend:
+              service:
+                name: payment-service
+                port:
+                  number: 3004
+          - path: /api/notifications
+            pathType: Prefix
+            backend:
+              service:
+                name: notification-service
+                port:
+                  number: 3005
