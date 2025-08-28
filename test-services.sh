@@ -1,44 +1,90 @@
 #!/bin/bash
 echo "Testing all microservices..."
 
-# Health checks
-echo "1. Health Checks:"
-curl -s http://localhost:3001/health && echo " ✅ User Service"
-curl -s http://localhost:3002/health && echo " ✅ Product Service"
-curl -s http://localhost:3003/health && echo " ✅ Order Service"
-curl -s http://localhost:3004/health && echo " ✅ Payment Service"
-curl -s http://localhost:3005/health && echo " ✅ Notification Service"
+# Function to test endpoint with expected outcome validation
+test_endpoint() {
+    local method=$1
+    local url=$2
+    local data=$3
+    local service_name=$4
+    local expected=$5  # "success" or "error" or specific status code
+    
+    if [ "$method" = "GET" ]; then
+        response=$(curl -s -w "\n%{http_code}" "$url")
+    else
+        response=$(curl -s -w "\n%{http_code}" -X "$method" "$url" -H "Content-Type: application/json" -d "$data")
+    fi
+    
+    # Split response and status code
+    body=$(echo "$response" | sed '$d')
+    status_code=$(echo "$response" | tail -n 1)
+    
+    # Validate based on expected outcome
+    if [ "$expected" = "success" ]; then
+        if [ "$status_code" = "200" ] || [ "$status_code" = "201" ]; then
+            if echo "$body" | grep -q "Cannot GET\|Cannot POST"; then
+                echo " ❌ $service_name (route not implemented)"
+            elif [ -z "$body" ]; then
+                echo " ❌ $service_name (empty response)"
+            elif echo "$body" | grep -q "error\|Error\|ERROR"; then
+                echo " ❌ $service_name (error in response: $(echo "$body" | cut -c1-50)...)"
+            else
+                echo " ✅ $service_name (HTTP $status_code)"
+            fi
+        else
+            echo " ❌ $service_name (expected success, got HTTP $status_code: $(echo "$body" | cut -c1-50)...)"
+        fi
+    elif [ "$expected" = "503" ]; then
+        if [ "$status_code" = "503" ]; then
+            echo " ✅ $service_name (correctly returned 503 Service Unavailable)"
+        else
+            echo " ❌ $service_name (expected 503, got HTTP $status_code: $(echo "$body" | cut -c1-50)...)"
+        fi
+    elif [ "$expected" = "422" ]; then
+        if [ "$status_code" = "422" ]; then
+            echo " ✅ $service_name (correctly returned 422 Validation Error)"
+        else
+            echo " ❌ $service_name (expected 422, got HTTP $status_code: $(echo "$body" | cut -c1-50)...)"
+        fi
+    elif [ "$expected" = "400" ]; then
+        if [ "$status_code" = "400" ]; then
+            echo " ✅ $service_name (correctly returned 400 Bad Request)"
+        else
+            echo " ❌ $service_name (expected 400, got HTTP $status_code: $(echo "$body" | cut -c1-50)...)"
+        fi
+    else
+        # Default validation for any response
+        if [ "$status_code" = "200" ] || [ "$status_code" = "201" ]; then
+            echo " ✅ $service_name (HTTP $status_code)"
+        else
+            echo " ❌ $service_name (HTTP $status_code: $(echo "$body" | cut -c1-50)...)"
+        fi
+    fi
+}
 
-# Service endpoints
-echo "\n2. Service Endpoints:"
-curl -s http://localhost:3001/api/users && echo " ✅ Users API"
-curl -s http://localhost:3002/api/products && echo " ✅ Products API"
-curl -s http://localhost:3003/api/orders && echo " ✅ Orders API"
-curl -s http://localhost:3004/api/payments && echo " ✅ Payments API"
-curl -s http://localhost:3005/api/notifications && echo " ✅ Notifications API"
+# Test GET endpoints (expect success)
+echo "1. Testing GET Endpoints:"
+test_endpoint "GET" "http://localhost:8000/" "" "Root" "success"
+test_endpoint "GET" "http://localhost:8000/health" "" "Health Check" "success"
+test_endpoint "GET" "http://localhost:3001/api/users" "" "GET Users" "success"
+test_endpoint "GET" "http://localhost:3002/api/products" "" "GET Products" "success"
+test_endpoint "GET" "http://localhost:3003/api/orders" "" "GET Orders" "success"
+test_endpoint "GET" "http://localhost:3004/api/payments" "" "GET Payments" "success"
+test_endpoint "GET" "http://localhost:3005/api/notifications" "" "GET Notifications" "success"
 
-# Test POST requests
-echo "\n3. POST Requests:"
-curl -X POST http://localhost:3001/api/users \
-  -H "Content-Type: application/json" \
-  -d '{"name": "John Doe", "email": "john@example.com"}' && echo " ✅ Create User"
+# Test POST endpoints (expect success)
+echo -e "\n2. Testing POST Endpoints:"
+test_endpoint "POST" "http://localhost:3001/api/users" '{"name": "John Doe", "email": "john@example.com"}' "POST Create User" "success"
+test_endpoint "POST" "http://localhost:3002/api/products" '{"name": "Laptop", "price": 999, "stock": 10}' "POST Create Product" "success"
+test_endpoint "POST" "http://localhost:3003/api/orders" '{"productId": "123", "quantity": 2}' "POST Create Order" "success"
+test_endpoint "POST" "http://localhost:3004/api/payments" '{"orderId": "123", "amount": 999}' "POST Process Payment" "success"
+test_endpoint "POST" "http://localhost:3005/api/notifications" '{"message": "Test notification"}' "POST Send Notification" "success"
 
-curl -X POST http://localhost:3002/api/products \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Laptop", "price": 999, "stock": 10}' && echo " ✅ Create Product"
+# Test error scenarios (expect specific errors)
+echo -e "\n3. Testing Error Scenarios:"
+test_endpoint "POST" "http://localhost:3001/api/users" '{"name": "John"}' "Missing email validation" "422"
+test_endpoint "POST" "http://localhost:3002/api/products" '{"name": "Laptop", "price": -10}' "Invalid price validation" "422"
+test_endpoint "POST" "http://localhost:3003/api/orders" '{"productId": "999", "quantity": 1}' "Order with unavailable product service" "503"
+test_endpoint "GET" "http://localhost:8000/proxy?host=nonexistent&port=9999" "" "Proxy to unavailable service" "503"
 
-curl -X POST http://localhost:3004/api/payments \
-  -H "Content-Type: application/json" \
-  -d '{"orderId": "123", "amount": 999.99}' && echo " ✅ Create Payment"
-
-curl -X POST http://localhost:3005/api/notifications \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Test notification", "userId": "123"}' && echo " ✅ Send Notification"
-
-# Test Order → Product sync call
-echo "\n4. Cross-Service Communication:"
-curl -X POST http://localhost:3003/api/orders \
-  -H "Content-Type: application/json" \
-  -d '{"productId": "123", "quantity": 2}' && echo " ✅ Order → Product sync"
-
-echo "\n✅ All tests completed!"
+echo -e "\n✅ All tests completed!"

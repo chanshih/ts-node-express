@@ -15,8 +15,22 @@ router.get("/env-var", getEnvVar);
 router.get("/fib", fibonacci);
 router.get("/req", proxyRequest);
 router.get("/health", healthCheck);
-router.get("/api/:service", getServiceData);
-router.post("/api/:service", createServiceData);
+// Microservice API routes
+router.get("/api/users", getServiceData);
+router.get("/api/products", getServiceData);
+router.get("/api/products/:productId", getServiceData);
+router.get("/api/orders", getServiceData);
+router.get("/api/payments", getServiceData);
+router.get("/api/notifications", getServiceData);
+
+router.post("/api/users", createServiceData);
+router.post("/api/products", createServiceData);
+router.post("/api/orders", createServiceData);
+router.post("/api/payments", createServiceData);
+router.post("/api/notifications", createServiceData);
+
+// Proxy route
+router.get("/proxy", proxyRequest);
 router.get("/", getSysInfo);
 
 export default router;
