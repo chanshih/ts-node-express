@@ -46,6 +46,7 @@ npm start
 
 - `PORT` - Server port (default: 8000)
 - `NODE_ENV` - Environment mode (default: development)
+- `PRODUCT_SERVICE_LATENCY` - Artificial latency for product service in milliseconds (default: 0)
 
 ## Microservices Architecture
 
@@ -85,7 +86,19 @@ PORT=3002 SERVICE_NAME=product-service npm run dev &  # Dependency
 PORT=3003 SERVICE_NAME=order-service PRODUCT_SERVICE_URL=http://localhost:3002 npm run dev  # Debug target
 ```
 
-### 3. Test All Services
+### 3. Simulate Network Latency
+
+Add artificial latency to product service for testing:
+
+```bash
+# Add 2 second latency to product service
+PORT=3002 SERVICE_NAME=product-service PRODUCT_SERVICE_LATENCY=6000 npm run dev &
+
+# Test order service with slow product dependency
+PORT=3003 SERVICE_NAME=order-service PRODUCT_SERVICE_URL=http://localhost:3002 npm run dev
+```
+
+### 4. Test All Services
 
 Run comprehensive service tests:
 
@@ -93,11 +106,7 @@ Run comprehensive service tests:
 ./test-services.sh
 ```
 
-
-
-
-
-### 4. Development Workflow
+### 5. Development Workflow
 
 **Daily cycle:**
 1. Start: `./start-all.sh`
@@ -126,6 +135,19 @@ kubectl get ingress -n ecommerce
 # Manual testing
 ALB_URL=$(kubectl get ingress ecommerce-ingress -n ecommerce -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 curl http://$ALB_URL/api/users
+```
+
+### Add Latency to Product Service in EKS
+
+```bash
+# Add 2 second latency to product service
+kubectl set env deployment/product-service PRODUCT_SERVICE_LATENCY=2000 -n ecommerce
+
+# Remove latency (set to 0)
+kubectl set env deployment/product-service PRODUCT_SERVICE_LATENCY=0 -n ecommerce
+
+# Check current environment variables
+kubectl describe deployment/product-service -n ecommerce | grep -A 10 Environment
 ```
 
 ### Debug EKS Issues

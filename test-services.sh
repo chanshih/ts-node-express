@@ -9,11 +9,14 @@ test_endpoint() {
     local service_name=$4
     local expected=$5  # "success" or "error" or specific status code
     
+    local start_time=$(date +%s)
     if [ "$method" = "GET" ]; then
         response=$(curl -s -w "\n%{http_code}" "$url")
     else
         response=$(curl -s -w "\n%{http_code}" -X "$method" "$url" -H "Content-Type: application/json" -d "$data")
     fi
+    local end_time=$(date +%s)
+    local duration=$((end_time - start_time))
     
     # Split response and status code
     body=$(echo "$response" | sed '$d')
@@ -23,41 +26,41 @@ test_endpoint() {
     if [ "$expected" = "success" ]; then
         if [ "$status_code" = "200" ] || [ "$status_code" = "201" ]; then
             if echo "$body" | grep -q "Cannot GET\|Cannot POST"; then
-                echo " ❌ $service_name (route not implemented)"
+                echo " ❌ $service_name (route not implemented) - ${duration}s"
             elif [ -z "$body" ]; then
-                echo " ❌ $service_name (empty response)"
+                echo " ❌ $service_name (empty response) - ${duration}s"
             elif echo "$body" | grep -q "error\|Error\|ERROR"; then
-                echo " ❌ $service_name (error in response: $(echo "$body" | cut -c1-50)...)"
+                echo " ❌ $service_name (error in response: $(echo "$body" | cut -c1-50)...) - ${duration}s"
             else
-                echo " ✅ $service_name (HTTP $status_code)"
+                echo " ✅ $service_name (HTTP $status_code) - ${duration}s"
             fi
         else
-            echo " ❌ $service_name (expected success, got HTTP $status_code: $(echo "$body" | cut -c1-50)...)"
+            echo " ❌ $service_name (expected success, got HTTP $status_code: $(echo "$body" | cut -c1-50)...) - ${duration}s"
         fi
     elif [ "$expected" = "503" ]; then
         if [ "$status_code" = "503" ]; then
-            echo " ✅ $service_name (correctly returned 503 Service Unavailable)"
+            echo " ✅ $service_name (correctly returned 503 Service Unavailable) - ${duration}s"
         else
-            echo " ❌ $service_name (expected 503, got HTTP $status_code: $(echo "$body" | cut -c1-50)...)"
+            echo " ❌ $service_name (expected 503, got HTTP $status_code: $(echo "$body" | cut -c1-50)...) - ${duration}s"
         fi
     elif [ "$expected" = "422" ]; then
         if [ "$status_code" = "422" ]; then
-            echo " ✅ $service_name (correctly returned 422 Validation Error)"
+            echo " ✅ $service_name (correctly returned 422 Validation Error) - ${duration}s"
         else
-            echo " ❌ $service_name (expected 422, got HTTP $status_code: $(echo "$body" | cut -c1-50)...)"
+            echo " ❌ $service_name (expected 422, got HTTP $status_code: $(echo "$body" | cut -c1-50)...) - ${duration}s"
         fi
     elif [ "$expected" = "400" ]; then
         if [ "$status_code" = "400" ]; then
-            echo " ✅ $service_name (correctly returned 400 Bad Request)"
+            echo " ✅ $service_name (correctly returned 400 Bad Request) - ${duration}s"
         else
-            echo " ❌ $service_name (expected 400, got HTTP $status_code: $(echo "$body" | cut -c1-50)...)"
+            echo " ❌ $service_name (expected 400, got HTTP $status_code: $(echo "$body" | cut -c1-50)...) - ${duration}s"
         fi
     else
         # Default validation for any response
         if [ "$status_code" = "200" ] || [ "$status_code" = "201" ]; then
-            echo " ✅ $service_name (HTTP $status_code)"
+            echo " ✅ $service_name (HTTP $status_code) - ${duration}s"
         else
-            echo " ❌ $service_name (HTTP $status_code: $(echo "$body" | cut -c1-50)...)"
+            echo " ❌ $service_name (HTTP $status_code: $(echo "$body" | cut -c1-50)...) - ${duration}s"
         fi
     fi
 }

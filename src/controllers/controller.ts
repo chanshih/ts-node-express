@@ -130,6 +130,14 @@ export const getServiceData = async (req: Request, res: Response) => {
   const port = process.env.PORT || '3000';
   const productId = req.params.productId;
   
+  // Add artificial latency for product service
+  if (serviceName === 'product-service') {
+    const latency = parseInt(process.env.PRODUCT_SERVICE_LATENCY || '0');
+    if (latency > 0) {
+      await new Promise(resolve => setTimeout(resolve, latency));
+    }
+  }
+  
   const mockData: Record<string, any[]> = {
     'user-service': [{ id: 1, name: 'John Doe', email: 'john@example.com' }],
     'product-service': [{ id: 1, name: 'Laptop', price: 999.99 }, { id: 123, name: 'Test Product', price: 299.99 }],
@@ -167,9 +175,17 @@ export const healthCheck = async (req: Request, res: Response) => {
   });
 };
 
-export const createServiceData = (req: Request, res: Response): void => {
+export const createServiceData = async (req: Request, res: Response): Promise<void> => {
   const serviceName = process.env.SERVICE_NAME || 'unknown';
   const requestData = req.body;
+  
+  // Add artificial latency for product service
+  if (serviceName === 'product-service') {
+    const latency = parseInt(process.env.PRODUCT_SERVICE_LATENCY || '0');
+    if (latency > 0) {
+      await new Promise(resolve => setTimeout(resolve, latency));
+    }
+  }
   
   // Validate request body
   if (!requestData || Object.keys(requestData).length === 0) {
