@@ -136,3 +136,16 @@ export const healthCheck = async (req: Request, res: Response) => {
     timestamp: new Date().toISOString() 
   });
 };
+
+export const createServiceData = async (req: Request, res: Response) => {
+  const serviceName = process.env.SERVICE_NAME || 'unknown';
+  const requestData = req.body;
+  
+  res.json({
+    message: 'Data created successfully',
+    service: serviceName,
+    data: requestData,
+    id: Math.floor(Math.random() * 1000),
+    timestamp: new Date().toISOString()
+  });
+};
