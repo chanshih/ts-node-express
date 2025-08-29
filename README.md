@@ -119,7 +119,7 @@ Run comprehensive service tests:
 
 ```bash
 # Deploy all microservices
-kubectl apply -f ecommerce-microservices.yaml
+kubectl apply -f web-app.yaml
 
 # Check deployment status
 kubectl get pods -n ecommerce
@@ -140,8 +140,8 @@ curl http://$ALB_URL/api/users
 ### Add Latency to Product Service in EKS
 
 ```bash
-# Add 2 second latency to product service
-kubectl set env deployment/product-service PRODUCT_SERVICE_LATENCY=2000 -n ecommerce
+# Add 6 second latency to product service
+kubectl set env deployment/product-service PRODUCT_SERVICE_LATENCY=6000 -n ecommerce
 
 # Remove latency (set to 0)
 kubectl set env deployment/product-service PRODUCT_SERVICE_LATENCY=0 -n ecommerce
