@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node --require @aws/aws-distro-opentelemetry-node-autoinstrumentation/register dist/server.js",
+    "start": "node dist/server.js",
     "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/server.ts",
     "lint": "eslint 'src/**/*.ts'",
     "lint-fix": "eslint 'src/**/*.ts' --fix",
@@ -43,7 +43,11 @@
     "typescript-eslint": "^8.33.1"
   },
   "dependencies": {
-    "@aws/aws-distro-opentelemetry-node-autoinstrumentation": "^0.6.0",
+    "@opentelemetry/api": "^1.8.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.46.1",
+    "@opentelemetry/exporter-otlp-http": "1.7.0",
+    "@opentelemetry/instrumentation": "^0.51.1",
+    "@opentelemetry/sdk-node": "^0.51.1",
     "axios": "^1.9.0",
     "systeminformation": "^5.27.1",
     "winston": "^3.17.0"
