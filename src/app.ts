@@ -1,14 +1,9 @@
-import './tracing'; // Initialize OpenTelemetry tracing first
 import express from "express";
 import routes from "./routes/routes";
 import { errorHandler } from "./middlewares/errorHandler";
 import { log } from "./log";
-import { trace } from '@opentelemetry/api';
 
 const app = express();
-
-// Get tracer instance
-const tracer = trace.getTracer(process.env.SERVICE_NAME || 'microservice');
 
 app.use(express.json());
 

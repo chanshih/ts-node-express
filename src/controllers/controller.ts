@@ -2,10 +2,6 @@ import { Request, Response, NextFunction } from "express";
 import axios from "axios";
 import si from "systeminformation";
 import { log } from "../log";
-import { trace, SpanStatusCode } from '@opentelemetry/api';
-
-// Get tracer instance
-const tracer = trace.getTracer('controller');
 
 const htmlBoilerPlate =
   "<!DOCTYPE html><html><head><title>TS-NODE-EXPRESS</title></head><body>{0}</body></html>";
@@ -244,28 +240,9 @@ export const createServiceData = async (req: Request, res: Response): Promise<vo
     
     // Always call product service for inventory check
     const productServiceUrl = process.env.PRODUCT_SERVICE_URL || 'http://product-service:3002';
-    
-    // Create custom span for product service call
-    const span = tracer.startSpan('product-service-call', {
-      attributes: {
-        'service.name': serviceName,
-        'product.id': requestData.productId,
-        'product.service.url': productServiceUrl
-      }
-    });
-    
     axios.get(`${productServiceUrl}/api/products/${requestData.productId}`)
       .then(() => {
         const orderId = Math.floor(Math.random() * 1000);
-        
-        // Add success attributes to span
-        span.setAttributes({
-          'order.id': orderId,
-          'order.status': 'success'
-        });
-        span.setStatus({ code: SpanStatusCode.OK });
-        span.end();
-        
         log.info('Order created successfully', {
           orderId,
           productId: requestData.productId,
@@ -282,14 +259,6 @@ export const createServiceData = async (req: Request, res: Response): Promise<vo
         });
       })
       .catch((error) => {
-        // Add error to span
-        span.recordException(error);
-        span.setStatus({ 
-          code: SpanStatusCode.ERROR, 
-          message: error.message 
-        });
-        span.end();
-        
         log.error('Product service call failed', {
           productId: requestData.productId,
           productServiceUrl,

@@ -49,12 +49,7 @@ spec:
               value: "3001"
             - name: SERVICE_NAME
               value: "user-service"
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://adot-collector:4318"
-            - name: OTEL_SERVICE_NAME
-              value: "user-service"
-            - name: OTEL_RESOURCE_ATTRIBUTES
-              value: "service.name=user-service,service.version=1.0.0"
+
           envFrom:
             - configMapRef:
                 name: service-config
@@ -112,12 +107,7 @@ spec:
               value: "3002"
             - name: SERVICE_NAME
               value: "product-service"
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://adot-collector:4318"
-            - name: OTEL_SERVICE_NAME
-              value: "product-service"
-            - name: OTEL_RESOURCE_ATTRIBUTES
-              value: "service.name=product-service,service.version=1.0.0"
+
           envFrom:
             - configMapRef:
                 name: service-config
@@ -175,12 +165,7 @@ spec:
               value: "3003"
             - name: SERVICE_NAME
               value: "order-service"
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://adot-collector:4318"
-            - name: OTEL_SERVICE_NAME
-              value: "order-service"
-            - name: OTEL_RESOURCE_ATTRIBUTES
-              value: "service.name=order-service,service.version=1.0.0"
+
           envFrom:
             - configMapRef:
                 name: service-config
@@ -238,12 +223,7 @@ spec:
               value: "3004"
             - name: SERVICE_NAME
               value: "payment-service"
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://adot-collector:4318"
-            - name: OTEL_SERVICE_NAME
-              value: "payment-service"
-            - name: OTEL_RESOURCE_ATTRIBUTES
-              value: "service.name=payment-service,service.version=1.0.0"
+
           envFrom:
             - configMapRef:
                 name: service-config
@@ -301,12 +281,7 @@ spec:
               value: "3005"
             - name: SERVICE_NAME
               value: "notification-service"
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://adot-collector:4318"
-            - name: OTEL_SERVICE_NAME
-              value: "notification-service"
-            - name: OTEL_RESOURCE_ATTRIBUTES
-              value: "service.name=notification-service,service.version=1.0.0"
+
           envFrom:
             - configMapRef:
                 name: service-config
