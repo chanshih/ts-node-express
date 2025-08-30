@@ -3,7 +3,7 @@
 
 set -e
 
-CLUSTER_NAME=${CLUSTER_NAME:-"ecommerce-cluster"}
+CLUSTER_NAME=${CLUSTER_NAME:-"eks-demo"}
 REGION=${AWS_REGION:-"us-east-1"}
 
 echo "🔍 Installing AWS Distro for OpenTelemetry EKS Add-on..."
