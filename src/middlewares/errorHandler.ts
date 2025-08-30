@@ -11,7 +11,19 @@ export const errorHandler = (
   res: Response,
   next: NextFunction,
 ) => {
-  log.error(err.message);
+  const errorLog = {
+    message: err.message || "Internal Server Error",
+    stack: err.stack,
+    status: err.status || 500,
+    method: req.method,
+    url: req.url,
+    userAgent: req.get('User-Agent'),
+    timestamp: new Date().toISOString(),
+    service: process.env.SERVICE_NAME || 'unknown'
+  };
+  
+  log.error('Application Error', errorLog);
+  
   res.status(err.status || 500).json({
     error: err.message || "Internal Server Error",
   });

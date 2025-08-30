@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import axios from "axios";
 import si from "systeminformation";
+import { log } from "../log";
 
 const htmlBoilerPlate =
   "<!DOCTYPE html><html><head><title>TS-NODE-EXPRESS</title></head><body>{0}</body></html>";
@@ -83,6 +84,13 @@ export const proxyRequest = (
       res.status(200).send("Sent a request to '" + url + "'\n<hr />\n" + response.data);
     })
     .catch((error: any) => {
+      log.error('Proxy request failed', {
+        url,
+        error: error.message,
+        code: error.code,
+        service: process.env.SERVICE_NAME
+      });
+      
       if (error.code === 'ECONNREFUSED') {
         res.status(503).json({ error: 'Service unavailable: Connection refused' });
       } else if (error.code === 'ETIMEDOUT') {
@@ -98,11 +106,13 @@ export const fibonacci = (req: Request, res: Response): void => {
   const n = parseInt(req.query.n as string);
   
   if (isNaN(n) || n < 0) {
+    log.error('Invalid fibonacci parameter', { n, service: process.env.SERVICE_NAME });
     res.status(400).json({ error: 'Invalid number parameter. Must be a positive integer.' });
     return;
   }
   
   if (n > 40) {
+    log.error('Fibonacci parameter too large', { n, service: process.env.SERVICE_NAME });
     res.status(400).json({ error: 'Number too large. Maximum value is 40.' });
     return;
   }
@@ -235,7 +245,13 @@ export const createServiceData = async (req: Request, res: Response): Promise<vo
           timestamp: new Date().toISOString()
         });
       })
-      .catch(() => {
+      .catch((error) => {
+        log.error('Product service call failed', {
+          productId: requestData.productId,
+          productServiceUrl,
+          error: error.message,
+          service: serviceName
+        });
         res.status(503).json({ error: 'Product service unavailable' });
       });
     return;

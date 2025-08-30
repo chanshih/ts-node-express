@@ -59,9 +59,35 @@ npm start
 5. **Notification Service** (Port 3005) - Email/SMS notifications
 
 ### Service Communication
-- Order Service → Product Service (synchronous inventory check)
-- All services communicate via REST APIs
-- Service discovery using environment variables
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   User Service  │    │ Product Service │    │ Payment Service │
+│    (Port 3001)  │    │   (Port 3002)   │    │   (Port 3004)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       ▲                       │
+         │                       │                       │
+         ▼                       │                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Main App      │    │  Order Service  │    │ Notification    │
+│   (Port 8000)   │◄───┤   (Port 3003)   ├───►│   Service       │
+│   [Proxy/ALB]   │    │                 │    │   (Port 3005)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │
+                                │ HTTP GET /api/products
+                                │ (inventory check)
+                                ▼
+                       ┌─────────────────┐
+                       │ Product Service │
+                       │   (Port 3002)   │
+                       └─────────────────┘
+```
+
+**Flow:**
+1. Client → Main App (ALB/Proxy)
+2. Order Service → Product Service (sync inventory check)
+3. All services communicate via REST APIs
+4. Service discovery using environment variables
 
 ## Local Testing (Native Node.js)
 
