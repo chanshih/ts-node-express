@@ -17,7 +17,7 @@ export AWS_REGION="us-east-1"
 
 ### Phase 1: Infrastructure Monitoring
 ```bash
-cd phase1
+cd /Users/chanshih/Documents/Tools/ts-node-express/observability/scripts/phase1
 ./01-deploy-container-insights.sh
 ./02-setup-logging.sh
 ./03-create-basic-dashboards.sh

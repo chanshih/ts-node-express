@@ -189,6 +189,12 @@ export const createServiceData = async (req: Request, res: Response): Promise<vo
   const serviceName = process.env.SERVICE_NAME || 'unknown';
   const requestData = req.body;
   
+  log.info('Creating service data', {
+    service: serviceName,
+    dataKeys: Object.keys(requestData),
+    timestamp: new Date().toISOString()
+  });
+  
   // Add artificial latency for product service
   if (serviceName === 'product-service') {
     const latency = parseInt(process.env.PRODUCT_SERVICE_LATENCY || '0');
@@ -236,12 +242,19 @@ export const createServiceData = async (req: Request, res: Response): Promise<vo
     const productServiceUrl = process.env.PRODUCT_SERVICE_URL || 'http://product-service:3002';
     axios.get(`${productServiceUrl}/api/products/${requestData.productId}`)
       .then(() => {
-        // Product service available, proceed with order
+        const orderId = Math.floor(Math.random() * 1000);
+        log.info('Order created successfully', {
+          orderId,
+          productId: requestData.productId,
+          quantity: requestData.quantity,
+          service: serviceName
+        });
+        
         res.status(201).json({
           message: 'Order created successfully',
           service: serviceName,
           data: requestData,
-          id: Math.floor(Math.random() * 1000),
+          id: orderId,
           timestamp: new Date().toISOString()
         });
       })
@@ -272,11 +285,18 @@ export const createServiceData = async (req: Request, res: Response): Promise<vo
   }
   
   // Only execute if not order-service with product dependency
+  const id = Math.floor(Math.random() * 1000);
+  log.info('Data created successfully', {
+    service: serviceName,
+    id,
+    dataType: Object.keys(requestData)[0]
+  });
+  
   res.status(201).json({
     message: 'Data created successfully',
     service: serviceName,
     data: requestData,
-    id: Math.floor(Math.random() * 1000),
+    id,
     timestamp: new Date().toISOString()
   });
 };
