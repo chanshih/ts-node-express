@@ -1,23 +1,14 @@
+import './tracing'; // Initialize OpenTelemetry tracing first
 import express from "express";
 import routes from "./routes/routes";
 import { errorHandler } from "./middlewares/errorHandler";
 import { log } from "./log";
-import AWSXRay from "aws-xray-sdk-core";
-import XRayExpress from "aws-xray-sdk-express";
-
-// Configure X-Ray
-AWSXRay.config([
-  AWSXRay.plugins.EKSPlugin,
-  AWSXRay.plugins.EC2Plugin
-]);
-
-// Capture AWS SDK calls
-const AWS = AWSXRay.captureAWS(require('aws-sdk'));
+import { trace } from '@opentelemetry/api';
 
 const app = express();
 
-// X-Ray tracing middleware (must be first)
-app.use(XRayExpress.openSegment(process.env.SERVICE_NAME || 'microservice'));
+// Get tracer instance
+const tracer = trace.getTracer(process.env.SERVICE_NAME || 'microservice');
 
 app.use(express.json());
 
@@ -49,8 +40,5 @@ for (const prefix of path_prefixes) {
 
 // Global error handler (should be after routes)
 app.use(errorHandler);
-
-// X-Ray close segment (must be last)
-app.use(XRayExpress.closeSegment());
 
 export default app;

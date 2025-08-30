@@ -1,85 +1,110 @@
 #!/bin/bash
-# Deploy AWS X-Ray daemon to EKS
+# Deploy AWS Distro for OpenTelemetry Collector for X-Ray tracing
 
 set -e
 
 CLUSTER_NAME=${CLUSTER_NAME:-"ecommerce-cluster"}
 REGION=${AWS_REGION:-"us-east-1"}
 
-echo "🔍 Deploying AWS X-Ray daemon..."
+echo "🔍 Deploying AWS Distro for OpenTelemetry Collector..."
 
-# Create X-Ray daemon DaemonSet
-kubectl apply -f - <<EOF
+# Create ADOT Collector manifest
+cat > /tmp/adot-collector.yaml << EOF
 apiVersion: v1
-kind: ServiceAccount
+kind: ConfigMap
 metadata:
-  name: xray-daemon
-  namespace: kube-system
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: xray-daemon
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-- kind: ServiceAccount
-  name: xray-daemon
-  namespace: kube-system
+  name: adot-collector-config
+  namespace: ecommerce
+data:
+  adot-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    processors:
+      batch:
+    exporters:
+      awsxray:
+        region: ${REGION}
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [awsxray]
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: xray-daemon
-  namespace: kube-system
+  name: adot-collector
+  namespace: ecommerce
 spec:
   selector:
     matchLabels:
-      app: xray-daemon
+      app: adot-collector
   template:
     metadata:
       labels:
-        app: xray-daemon
+        app: adot-collector
     spec:
-      serviceAccountName: xray-daemon
+      serviceAccountName: adot-collector
       containers:
-      - name: xray-daemon
-        image: amazon/aws-xray-daemon:latest
-        command: ["/usr/bin/xray", "-o", "-b", "0.0.0.0:2000"]
+      - name: adot-collector
+        image: public.ecr.aws/aws-observability/aws-otel-collector:latest
+        command: ["/awscollector", "--config=/etc/adot/adot-config.yaml"]
+        volumeMounts:
+        - name: adot-config
+          mountPath: /etc/adot
         resources:
           limits:
             memory: 256Mi
             cpu: 250m
           requests:
-            memory: 32Mi
-            cpu: 10m
+            memory: 64Mi
+            cpu: 50m
         ports:
-        - containerPort: 2000
-          protocol: UDP
-        - containerPort: 2000
+        - containerPort: 4317
           protocol: TCP
+        - containerPort: 4318
+          protocol: TCP
+      volumes:
+      - name: adot-config
+        configMap:
+          name: adot-collector-config
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: adot-collector
+  namespace: ecommerce
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: xray-daemon
-  namespace: kube-system
+  name: adot-collector
+  namespace: ecommerce
 spec:
   selector:
-    app: xray-daemon
+    app: adot-collector
   ports:
-  - port: 2000
-    protocol: UDP
-    targetPort: 2000
-  - port: 2000
+  - name: grpc
+    port: 4317
     protocol: TCP
-    targetPort: 2000
+    targetPort: 4317
+  - name: http
+    port: 4318
+    protocol: TCP
+    targetPort: 4318
 EOF
 
-# Wait for X-Ray daemon to be ready
-echo "⏳ Waiting for X-Ray daemon to be ready..."
-kubectl wait --for=condition=ready pod -l app=xray-daemon -n kube-system --timeout=300s
+# Apply ADOT Collector
+kubectl apply -f /tmp/adot-collector.yaml
 
-echo "✅ X-Ray daemon deployed successfully"
+# Wait for deployment
+echo "⏳ Waiting for ADOT Collector to be ready..."
+kubectl wait --for=condition=ready pod -l app=adot-collector -n ecommerce --timeout=300s
+
+echo "✅ AWS Distro for OpenTelemetry Collector deployed successfully"

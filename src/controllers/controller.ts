@@ -2,10 +2,10 @@ import { Request, Response, NextFunction } from "express";
 import axios from "axios";
 import si from "systeminformation";
 import { log } from "../log";
-import AWSXRay from "aws-xray-sdk-core";
+import { trace, SpanStatusCode } from '@opentelemetry/api';
 
-// Instrument axios for X-Ray tracing
-const tracedAxios = AWSXRay.captureHTTPsGlobal(require('axios'));
+// Get tracer instance
+const tracer = trace.getTracer('controller');
 
 const htmlBoilerPlate =
   "<!DOCTYPE html><html><head><title>TS-NODE-EXPRESS</title></head><body>{0}</body></html>";
@@ -83,7 +83,7 @@ export const proxyRequest = (
   const path = req.query.path ? req.query.path : "/";
   const url = protocol + "://" + host + ":" + port + path;
   
-  tracedAxios.get(url, { timeout: 5000 })
+  axios.get(url, { timeout: 5000 })
     .then(response => {
       res.status(200).send("Sent a request to '" + url + "'\n<hr />\n" + response.data);
     })
@@ -245,21 +245,26 @@ export const createServiceData = async (req: Request, res: Response): Promise<vo
     // Always call product service for inventory check
     const productServiceUrl = process.env.PRODUCT_SERVICE_URL || 'http://product-service:3002';
     
-    // Create custom subsegment for product service call
-    const segment = AWSXRay.getSegment();
-    const subsegment = segment?.addNewSubsegment('product-service-call');
-    subsegment?.addAnnotation('productId', requestData.productId);
-    subsegment?.addMetadata('request', { productId: requestData.productId, quantity: requestData.quantity });
+    // Create custom span for product service call
+    const span = tracer.startSpan('product-service-call', {
+      attributes: {
+        'service.name': serviceName,
+        'product.id': requestData.productId,
+        'product.service.url': productServiceUrl
+      }
+    });
     
-    tracedAxios.get(`${productServiceUrl}/api/products/${requestData.productId}`)
+    axios.get(`${productServiceUrl}/api/products/${requestData.productId}`)
       .then(() => {
-        subsegment?.close();
         const orderId = Math.floor(Math.random() * 1000);
         
-        // Add custom annotation for successful order
-        const segment = AWSXRay.getSegment();
-        segment?.addAnnotation('orderId', orderId);
-        segment?.addAnnotation('productId', requestData.productId);
+        // Add success attributes to span
+        span.setAttributes({
+          'order.id': orderId,
+          'order.status': 'success'
+        });
+        span.setStatus({ code: SpanStatusCode.OK });
+        span.end();
         
         log.info('Order created successfully', {
           orderId,
@@ -277,8 +282,13 @@ export const createServiceData = async (req: Request, res: Response): Promise<vo
         });
       })
       .catch((error) => {
-        subsegment?.addError(error);
-        subsegment?.close();
+        // Add error to span
+        span.recordException(error);
+        span.setStatus({ 
+          code: SpanStatusCode.ERROR, 
+          message: error.message 
+        });
+        span.end();
         
         log.error('Product service call failed', {
           productId: requestData.productId,
