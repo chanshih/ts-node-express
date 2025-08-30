@@ -1,75 +1,24 @@
 #!/bin/bash
-# Deploy AWS X-Ray daemon for distributed tracing
+# Deploy AWS Distro for OpenTelemetry EKS Add-on
 
 set -e
 
-echo "🔍 Deploying AWS X-Ray daemon..."
+CLUSTER_NAME=${CLUSTER_NAME:-"ecommerce-cluster"}
+REGION=${AWS_REGION:-"us-east-1"}
 
-# Create X-Ray daemon manifest
-cat > /tmp/xray-daemon.yaml << EOF
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: xray-daemon
-  namespace: ecommerce
-spec:
-  selector:
-    matchLabels:
-      app: xray-daemon
-  template:
-    metadata:
-      labels:
-        app: xray-daemon
-    spec:
-      serviceAccountName: xray-daemon
-      containers:
-      - name: xray-daemon
-        image: amazon/aws-xray-daemon:latest
-        command: ["/usr/bin/xray", "-o", "-b", "0.0.0.0:2000"]
-        resources:
-          limits:
-            memory: 256Mi
-          requests:
-            cpu: 256m
-            memory: 32Mi
-        ports:
-        - name: xray-ingest
-          containerPort: 2000
-          protocol: UDP
-        - name: xray-tcp
-          containerPort: 2000
-          protocol: TCP
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: xray-daemon
-  namespace: ecommerce
-  annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam::$(aws sts get-caller-identity --query Account --output text):role/EKS-XRay-Role
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: xray-daemon
-  namespace: ecommerce
-spec:
-  selector:
-    app: xray-daemon
-  ports:
-  - name: xray-ingest
-    port: 2000
-    protocol: UDP
-  - name: xray-tcp
-    port: 2000
-    protocol: TCP
-EOF
+echo "🔍 Installing AWS Distro for OpenTelemetry EKS Add-on..."
 
-# Apply X-Ray daemon
-kubectl apply -f /tmp/xray-daemon.yaml
+# Install ADOT EKS Add-on
+aws eks create-addon \
+    --cluster-name $CLUSTER_NAME \
+    --addon-name adot \
+    --region $REGION
 
-# Wait for deployment
-echo "⏳ Waiting for X-Ray daemon to be ready..."
-kubectl wait --for=condition=ready pod -l app=xray-daemon -n ecommerce --timeout=300s
+# Wait for add-on to be active
+echo "⏳ Waiting for ADOT add-on to be active..."
+aws eks wait addon-active \
+    --cluster-name $CLUSTER_NAME \
+    --addon-name adot \
+    --region $REGION
 
-echo "✅ X-Ray daemon deployed successfully"
+echo "✅ AWS Distro for OpenTelemetry EKS Add-on installed successfully"
