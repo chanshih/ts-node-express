@@ -2,6 +2,10 @@ import { Request, Response, NextFunction } from "express";
 import axios from "axios";
 import si from "systeminformation";
 import { log } from "../log";
+import AWSXRay from "aws-xray-sdk-core";
+
+// Instrument axios for X-Ray tracing
+const tracedAxios = AWSXRay.captureHTTPsGlobal(require('axios'));
 
 const htmlBoilerPlate =
   "<!DOCTYPE html><html><head><title>TS-NODE-EXPRESS</title></head><body>{0}</body></html>";
@@ -79,7 +83,7 @@ export const proxyRequest = (
   const path = req.query.path ? req.query.path : "/";
   const url = protocol + "://" + host + ":" + port + path;
   
-  axios.get(url, { timeout: 5000 })
+  tracedAxios.get(url, { timeout: 5000 })
     .then(response => {
       res.status(200).send("Sent a request to '" + url + "'\n<hr />\n" + response.data);
     })
@@ -240,9 +244,23 @@ export const createServiceData = async (req: Request, res: Response): Promise<vo
     
     // Always call product service for inventory check
     const productServiceUrl = process.env.PRODUCT_SERVICE_URL || 'http://product-service:3002';
-    axios.get(`${productServiceUrl}/api/products/${requestData.productId}`)
+    
+    // Create custom subsegment for product service call
+    const segment = AWSXRay.getSegment();
+    const subsegment = segment?.addNewSubsegment('product-service-call');
+    subsegment?.addAnnotation('productId', requestData.productId);
+    subsegment?.addMetadata('request', { productId: requestData.productId, quantity: requestData.quantity });
+    
+    tracedAxios.get(`${productServiceUrl}/api/products/${requestData.productId}`)
       .then(() => {
+        subsegment?.close();
         const orderId = Math.floor(Math.random() * 1000);
+        
+        // Add custom annotation for successful order
+        const segment = AWSXRay.getSegment();
+        segment?.addAnnotation('orderId', orderId);
+        segment?.addAnnotation('productId', requestData.productId);
+        
         log.info('Order created successfully', {
           orderId,
           productId: requestData.productId,
@@ -259,6 +277,9 @@ export const createServiceData = async (req: Request, res: Response): Promise<vo
         });
       })
       .catch((error) => {
+        subsegment?.addError(error);
+        subsegment?.close();
+        
         log.error('Product service call failed', {
           productId: requestData.productId,
           productServiceUrl,
